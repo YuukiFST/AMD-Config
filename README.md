@@ -17,6 +17,13 @@ A Windows application for viewing and modifying AMD/Nvidia GPU registry DWORDs w
 - **Smart Revert**: Restore original values or delete DWORDs that didn't exist before
 - **Vendor-Specific UI**: Color scheme changes based on selected GPU (Red for AMD, Green for Nvidia)
 
+## Screenshots
+
+<img width="403" height="232" alt="image" src="https://github.com/user-attachments/assets/9c43d654-ac8e-4a62-8c6b-625c056c2f45" />
+<img width="1202" height="753" alt="image" src="https://github.com/user-attachments/assets/55062d7a-84e2-4c18-9765-92e743886125" />
+<img width="1201" height="749" alt="image" src="https://github.com/user-attachments/assets/4edd42a2-686d-43b1-a19e-91a15d7a46f7" />
+
+
 ## Requirements
 
 - Windows 10/11
