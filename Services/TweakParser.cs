@@ -5,7 +5,19 @@ namespace AMD_DWORD_Viewer.Services
 {
     public class TweakParser
     {
+        private readonly GpuVendor vendor;
+
+        public TweakParser(GpuVendor selectedVendor = GpuVendor.AMD)
+        {
+            vendor = selectedVendor;
+        }
+
         public List<TweakDefinition> LoadTweaks()
+        {
+            return vendor == GpuVendor.Nvidia ? LoadNvidiaTweaks() : LoadAmdTweaks();
+        }
+
+        private List<TweakDefinition> LoadAmdTweaks()
         {
             var tweaks = new List<TweakDefinition>();
 
@@ -17,6 +29,152 @@ namespace AMD_DWORD_Viewer.Services
             tweaks.Add(CreateDisableTracesTweak());
 
             return tweaks;
+        }
+
+        private List<TweakDefinition> LoadNvidiaTweaks()
+        {
+            var tweaks = new List<TweakDefinition>();
+
+            tweaks.Add(CreateNvidiaDisablePowerManagementTweak());
+            tweaks.Add(CreateNvidiaDisableLoggingTweak());
+            tweaks.Add(CreateNvidiaPerformanceModeTweak());
+            tweaks.Add(CreateNvidiaDisablePreemptionTweak());
+            tweaks.Add(CreateNvidiaDisableHDCPTweak());
+            tweaks.Add(CreateNvidiaDisableECCTweak());
+            tweaks.Add(CreateNvidiaDisableScrubbersTweak());
+
+            return tweaks;
+        }
+
+        private TweakDefinition CreateNvidiaDisablePowerManagementTweak()
+        {
+            var tweak = new TweakDefinition
+            {
+                Name = "Disable Power Management",
+                Description = "Disables GPU power management features for maximum performance"
+            };
+
+            tweak.Changes.Add(new TweakChange { KeyName = "EnableRuntimePowerManagement", TargetValue = 0 });
+            tweak.Changes.Add(new TweakChange { KeyName = "EnableMsHybrid", TargetValue = 0 });
+            tweak.Changes.Add(new TweakChange { KeyName = "EnableCoprocPowerControl", TargetValue = 0 });
+            tweak.Changes.Add(new TweakChange { KeyName = "EnableGC6InDisplayOffState", TargetValue = 0 });
+            tweak.Changes.Add(new TweakChange { KeyName = "DisableAsyncPstates", TargetValue = 1 });
+            tweak.Changes.Add(new TweakChange { KeyName = "DisableDynamicPstate", TargetValue = 1 });
+            tweak.Changes.Add(new TweakChange { KeyName = "PowerSavingTweaks", TargetValue = 0 });
+            tweak.Changes.Add(new TweakChange { KeyName = "RMPowerFeature", TargetValue = 0 });
+            tweak.Changes.Add(new TweakChange { KeyName = "RMPowerFeature2", TargetValue = 0 });
+            tweak.Changes.Add(new TweakChange { KeyName = "EnableMClkSlowdown", TargetValue = 0 });
+            tweak.Changes.Add(new TweakChange { KeyName = "RMDidleFeatureGC5", TargetValue = 0 });
+
+            return tweak;
+        }
+
+        private TweakDefinition CreateNvidiaDisableLoggingTweak()
+        {
+            var tweak = new TweakDefinition
+            {
+                Name = "Disable Logging",
+                Description = "Disables driver logging and tracing features"
+            };
+
+            tweak.Changes.Add(new TweakChange { KeyName = "LogErrorEntries", TargetValue = 0 });
+            tweak.Changes.Add(new TweakChange { KeyName = "LogEventEntries", TargetValue = 0 });
+            tweak.Changes.Add(new TweakChange { KeyName = "LogPagingEntries", TargetValue = 0 });
+            tweak.Changes.Add(new TweakChange { KeyName = "LogWarningEntries", TargetValue = 0 });
+            tweak.Changes.Add(new TweakChange { KeyName = "prtLevel", TargetValue = 0 });
+            tweak.Changes.Add(new TweakChange { KeyName = "prtBreak", TargetValue = 0 });
+            tweak.Changes.Add(new TweakChange { KeyName = "ENABLE_OCA_LOGGING", TargetValue = 0 });
+            tweak.Changes.Add(new TweakChange { KeyName = "EnableLoggingInterface", TargetValue = 0 });
+            tweak.Changes.Add(new TweakChange { KeyName = "SchedulerLogDebugMode", TargetValue = 0 });
+            tweak.Changes.Add(new TweakChange { KeyName = "EnablePageFaultDebugOutput", TargetValue = 0 });
+            tweak.Changes.Add(new TweakChange { KeyName = "EnableGpuFirmwareLogs", TargetValue = 0 });
+
+            return tweak;
+        }
+
+        private TweakDefinition CreateNvidiaPerformanceModeTweak()
+        {
+            var tweak = new TweakDefinition
+            {
+                Name = "Enable Performance Mode",
+                Description = "Enables maximum GPU performance settings"
+            };
+
+            tweak.Changes.Add(new TweakChange { KeyName = "EnablePerformanceMode", TargetValue = 1 });
+            tweak.Changes.Add(new TweakChange { KeyName = "AllowMaxPerf", TargetValue = 1 });
+            tweak.Changes.Add(new TweakChange { KeyName = "EnableAggressivePStateBoost", TargetValue = 1 });
+            tweak.Changes.Add(new TweakChange { KeyName = "RMDisablePStates", TargetValue = 0 });
+            tweak.Changes.Add(new TweakChange { KeyName = "DisableGrAuto", TargetValue = 0 });
+
+            return tweak;
+        }
+
+        private TweakDefinition CreateNvidiaDisablePreemptionTweak()
+        {
+            var tweak = new TweakDefinition
+            {
+                Name = "Disable Preemption",
+                Description = "Disables shader preemption for reduced latency"
+            };
+
+            tweak.Changes.Add(new TweakChange { KeyName = "DisablePreemption", TargetValue = 1 });
+            tweak.Changes.Add(new TweakChange { KeyName = "DisablePreemptionOnS3S4", TargetValue = 1 });
+            tweak.Changes.Add(new TweakChange { KeyName = "DisableCudaContextPreemption", TargetValue = 1 });
+            tweak.Changes.Add(new TweakChange { KeyName = "EnableMidBufferPreemption", TargetValue = 0 });
+            tweak.Changes.Add(new TweakChange { KeyName = "EnableAsyncMidBufferPreemption", TargetValue = 0 });
+            tweak.Changes.Add(new TweakChange { KeyName = "EnableMidGfxPreemption", TargetValue = 0 });
+            tweak.Changes.Add(new TweakChange { KeyName = "EnableCEPreemption", TargetValue = 0 });
+            tweak.Changes.Add(new TweakChange { KeyName = "EnableSCGMidBufferPreemption", TargetValue = 0 });
+
+            return tweak;
+        }
+
+        private TweakDefinition CreateNvidiaDisableHDCPTweak()
+        {
+            var tweak = new TweakDefinition
+            {
+                Name = "Disable HDCP",
+                Description = "Disables HDCP copy protection (may break Twitch/Netflix)"
+            };
+
+            tweak.Changes.Add(new TweakChange { KeyName = "RMHdcpKeyglobZero", TargetValue = 1 });
+
+            return tweak;
+        }
+
+        private TweakDefinition CreateNvidiaDisableECCTweak()
+        {
+            var tweak = new TweakDefinition
+            {
+                Name = "Disable ECC",
+                Description = "Disables Error Correction Code memory checking"
+            };
+
+            tweak.Changes.Add(new TweakChange { KeyName = "RMAERRForceDisable", TargetValue = 1 });
+            tweak.Changes.Add(new TweakChange { KeyName = "RMNoECCFuseCheck", TargetValue = 1 });
+            tweak.Changes.Add(new TweakChange { KeyName = "RMDisableRCOnDBE", TargetValue = 1 });
+            tweak.Changes.Add(new TweakChange { KeyName = "RM1441072", TargetValue = 1 });
+            tweak.Changes.Add(new TweakChange { KeyName = "RMAERRHandling", TargetValue = 0 });
+            tweak.Changes.Add(new TweakChange { KeyName = "RMChkSuppl200405980Driv", TargetValue = 0x13deed31 });
+
+            return tweak;
+        }
+
+        private TweakDefinition CreateNvidiaDisableScrubbersTweak()
+        {
+            var tweak = new TweakDefinition
+            {
+                Name = "Disable Scrubbers",
+                Description = "Disables memory scrubbing for faster VRAM operations"
+            };
+
+            tweak.Changes.Add(new TweakChange { KeyName = "RMNoECCFBScrub", TargetValue = 1 });
+            tweak.Changes.Add(new TweakChange { KeyName = "RMDisableScrubOnFree", TargetValue = 1 });
+            tweak.Changes.Add(new TweakChange { KeyName = "RMDisableAsyncMemScrub", TargetValue = 1 });
+            tweak.Changes.Add(new TweakChange { KeyName = "RMDisableFastScrubber", TargetValue = 1 });
+            tweak.Changes.Add(new TweakChange { KeyName = "RMUcodeEncryption", TargetValue = 0x15555 });
+
+            return tweak;
         }
 
         private TweakDefinition CreateDisableAllGatingsTweak()

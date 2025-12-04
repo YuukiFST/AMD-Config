@@ -13,12 +13,14 @@ namespace AMD_DWORD_Viewer.Services
         private readonly RegistryWriter registryWriter;
         private readonly RegistryReader registryReader;
         private readonly string stateFilePath;
+        private readonly GpuVendor vendor;
         private string gpuRegistryPath = string.Empty;
 
-        public TweakManager(RegistryWriter writer, RegistryReader reader)
+        public TweakManager(RegistryWriter writer, RegistryReader reader, GpuVendor selectedVendor = GpuVendor.AMD)
         {
             registryWriter = writer;
             registryReader = reader;
+            vendor = selectedVendor;
             stateFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tweaks_state.json");
             gpuRegistryPath = GetGpuRegistryPath();
         }
@@ -38,9 +40,16 @@ namespace AMD_DWORD_Viewer.Services
                                 if (subKey != null)
                                 {
                                     var desc = subKey.GetValue("DriverDesc") as string;
-                                    if (desc != null && desc.Contains("Radeon", StringComparison.OrdinalIgnoreCase))
+                                    if (desc != null)
                                     {
-                                        return $"HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\Class\\{{4d36e968-e325-11ce-bfc1-08002be10318}}\\{subKeyName}";
+                                        bool isMatch = vendor == GpuVendor.Nvidia
+                                            ? (desc.Contains("NVIDIA", StringComparison.OrdinalIgnoreCase) || desc.Contains("GeForce", StringComparison.OrdinalIgnoreCase))
+                                            : desc.Contains("Radeon", StringComparison.OrdinalIgnoreCase);
+                                        
+                                        if (isMatch)
+                                        {
+                                            return $"HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\Class\\{{4d36e968-e325-11ce-bfc1-08002be10318}}\\{subKeyName}";
+                                        }
                                     }
                                 }
                             }
@@ -48,7 +57,10 @@ namespace AMD_DWORD_Viewer.Services
                     }
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error getting GPU registry path: {ex.Message}");
+            }
             
             return string.Empty;
         }
@@ -57,7 +69,7 @@ namespace AMD_DWORD_Viewer.Services
         {
             if (string.IsNullOrEmpty(gpuRegistryPath))
             {
-                throw new Exception("Could not find AMD GPU registry path");
+                throw new Exception($"Could not find {vendor} GPU registry path");
             }
 
             foreach (var change in tweak.Changes)
@@ -68,7 +80,20 @@ namespace AMD_DWORD_Viewer.Services
                 if (existingEntry != null && existingEntry.Exists)
                 {
                     change.ExistedBefore = true;
-                    change.OriginalValue = existingEntry.Value != null ? Convert.ToUInt32(existingEntry.Value) : 0;
+                    try
+                    {
+                        change.OriginalValue = existingEntry.Value != null ? Convert.ToUInt32(existingEntry.Value) : 0;
+                    }
+                    catch (FormatException)
+                    {
+                        change.ExistedBefore = false;
+                        change.OriginalValue = null;
+                    }
+                    catch (InvalidCastException)
+                    {
+                        change.ExistedBefore = false;
+                        change.OriginalValue = null;
+                    }
                 }
                 else
                 {
@@ -93,7 +118,7 @@ namespace AMD_DWORD_Viewer.Services
         {
             if (string.IsNullOrEmpty(gpuRegistryPath))
             {
-                throw new Exception("Could not find AMD GPU registry path");
+                throw new Exception($"Could not find {vendor} GPU registry path");
             }
 
             foreach (var change in tweak.Changes)
@@ -152,7 +177,7 @@ namespace AMD_DWORD_Viewer.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error saving tweak state: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Error saving tweak state: {ex.Message}");
             }
         }
 
@@ -189,22 +214,9 @@ namespace AMD_DWORD_Viewer.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error loading tweak state: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Error loading tweak state: {ex.Message}");
             }
         }
     }
-
-    public class TweakState
-    {
-        public bool IsApplied { get; set; }
-        public List<TweakChangeState> Changes { get; set; } = new List<TweakChangeState>();
-    }
-
-    public class TweakChangeState
-    {
-        public string KeyName { get; set; } = string.Empty;
-        public uint TargetValue { get; set; }
-        public uint? OriginalValue { get; set; }
-        public bool ExistedBefore { get; set; }
-    }
 }
+

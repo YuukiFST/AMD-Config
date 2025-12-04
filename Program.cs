@@ -13,7 +13,14 @@ namespace AMD_DWORD_Viewer
                 Application.EnableVisualStyles();
                 Application.SetCompatibleTextRenderingDefault(false);
                 Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
-                Application.Run(new MainForm());
+
+                using (var selectionForm = new VendorSelectionForm())
+                {
+                    if (selectionForm.ShowDialog() == DialogResult.OK)
+                    {
+                        Application.Run(new MainForm(selectionForm.SelectedVendor));
+                    }
+                }
             }
             catch (Exception ex)
             {

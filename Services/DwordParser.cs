@@ -8,45 +8,65 @@ namespace AMD_DWORD_Viewer.Services
 {
     public class DwordParser
     {
+        private readonly GpuVendor vendor;
+
+        public DwordParser(GpuVendor selectedVendor)
+        {
+            vendor = selectedVendor;
+        }
+
         public List<DwordEntry> ParseFile()
         {
             var entries = new List<DwordEntry>();
 
             var assembly = Assembly.GetExecutingAssembly();
-            var resourceName = "AMD_DWORD_Viewer.AMD_EXPORT.txt";
-
-            using (Stream? stream = assembly.GetManifestResourceStream(resourceName))
+            
+            List<string> resourceNames = new List<string>();
+            if (vendor == GpuVendor.AMD)
             {
-                if (stream == null)
-                {
-                    throw new FileNotFoundException($"Embedded resource '{resourceName}' not found.");
-                }
+                resourceNames.Add("AMD_DWORD_Viewer.AMD_EXPORT.txt");
+            }
+            else
+            {
+                resourceNames.Add("AMD_DWORD_Viewer.NVIDIA_0000.txt");
+                resourceNames.Add("AMD_DWORD_Viewer.NVIDIA_NVLDDMKM.txt");
+            }
 
-                using (StreamReader reader = new StreamReader(stream))
+            foreach (var resourceName in resourceNames)
+            {
+                using (Stream? stream = assembly.GetManifestResourceStream(resourceName))
                 {
-                    string? line;
-                    while ((line = reader.ReadLine()) != null)
+                    if (stream == null)
                     {
-                        if (string.IsNullOrWhiteSpace(line))
-                            continue;
+                        throw new FileNotFoundException($"Embedded resource '{resourceName}' not found.");
+                    }
 
-                        var parts = line.Split(new[] { " : " }, StringSplitOptions.None);
-                        if (parts.Length != 2)
-                            continue;
-
-                        var registryPath = parts[0].Trim();
-                        var keyName = parts[1].Trim();
-
-                        var convertedPath = ConvertRegistryPath(registryPath);
-
-                        entries.Add(new DwordEntry
+                    using (StreamReader reader = new StreamReader(stream))
+                    {
+                        string? line;
+                        while ((line = reader.ReadLine()) != null)
                         {
-                            RegistryPath = convertedPath,
-                            KeyName = keyName,
-                            OriginalLine = line,
-                            Exists = false,
-                            Value = null
-                        });
+                            if (string.IsNullOrWhiteSpace(line))
+                                continue;
+
+                            var parts = line.Split(new[] { " : " }, StringSplitOptions.None);
+                            if (parts.Length != 2)
+                                continue;
+
+                            var registryPath = parts[0].Trim();
+                            var keyName = parts[1].Trim();
+
+                            var convertedPath = ConvertRegistryPath(registryPath);
+
+                            entries.Add(new DwordEntry
+                            {
+                                RegistryPath = convertedPath,
+                                KeyName = keyName,
+                                OriginalLine = line,
+                                Exists = false,
+                                Value = null
+                            });
+                        }
                     }
                 }
             }

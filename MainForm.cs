@@ -21,34 +21,107 @@ namespace AMD_DWORD_Viewer
 
         private List<DwordEntry> allEntries = new List<DwordEntry>();
         private List<DwordEntry> filteredEntries = new List<DwordEntry>();
-        private readonly DwordParser parser = new DwordParser();
+        private DwordParser parser;
         private readonly RegistryReader registryReader = new RegistryReader();
         private readonly RegistryWriter registryWriter = new RegistryWriter();
         private readonly List<Models.ChangeEntry> changeHistory = new List<Models.ChangeEntry>();
-        private readonly TweakParser tweakParser = new TweakParser();
+        private readonly TweakParser tweakParser;
         private TweakManager? tweakManager;
         private TweaksPanel? tweaksPanel;
         private List<TweakDefinition> tweaks = new List<TweakDefinition>();
-        private bool isSearchPlaceholder = true;
         private bool showRegistryPath = true; 
-        private bool sortAscending = true; 
+        private bool sortAscending = true;
+        private System.Windows.Forms.Timer? searchDebounceTimer;
+        private GpuVendor vendor;
 
-        public MainForm()
+        public MainForm(GpuVendor selectedVendor)
         {
+            vendor = selectedVendor;
+            parser = new DwordParser(vendor);
+            tweakParser = new TweakParser(vendor);
             InitializeComponent();
+            InitializeSearchDebounce();
             
+            this.Text = vendor == GpuVendor.AMD ? "GPU Dword Manager - AMD" : "GPU Dword Manager - Nvidia";
 
             try
             {
-                string iconPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "amd.ico");
-                if (System.IO.File.Exists(iconPath))
+                string resourceName = vendor == GpuVendor.AMD 
+                    ? "AMD_DWORD_Viewer.amd.ico" 
+                    : "AMD_DWORD_Viewer.nvidia.ico";
+                using (var stream = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream(resourceName))
                 {
-                    this.Icon = new Icon(iconPath);
+                    if (stream != null)
+                    {
+                        this.Icon = new Icon(stream);
+                    }
                 }
             }
             catch
             {
             }
+            
+            ApplyVendorColorScheme();
+        }
+
+        private void ApplyVendorColorScheme()
+        {
+            Color accentColor = AppColors.GetAccentColor(vendor);
+            
+            if (btnTogglePath != null)
+            {
+                btnTogglePath.FlatAppearance.BorderColor = accentColor;
+                btnTogglePath.ForeColor = accentColor;
+            }
+            
+            if (btnUndo != null)
+            {
+                btnUndo.FlatAppearance.BorderColor = accentColor;
+                btnUndo.ForeColor = accentColor;
+            }
+            
+            if (btnHistory != null)
+            {
+                btnHistory.FlatAppearance.BorderColor = accentColor;
+                btnHistory.ForeColor = accentColor;
+            }
+        }
+
+        private void InitializeSearchDebounce()
+        {
+            searchDebounceTimer = new System.Windows.Forms.Timer();
+            searchDebounceTimer.Interval = 300;
+            searchDebounceTimer.Tick += (s, e) =>
+            {
+                searchDebounceTimer.Stop();
+                ApplyFilter();
+            };
+        }
+
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            switch (keyData)
+            {
+                case Keys.Control | Keys.F:
+                    txtSearch.Focus();
+                    txtSearch.SelectAll();
+                    return true;
+
+                case Keys.Delete:
+                    if (listViewDwords.Focused && listViewDwords.SelectedIndices.Count > 0)
+                    {
+                        menuItemDelete_Click(null, EventArgs.Empty);
+                    }
+                    return true;
+
+                case Keys.Enter:
+                    if (listViewDwords.Focused && listViewDwords.SelectedIndices.Count > 0)
+                    {
+                        menuItemEdit_Click(null, EventArgs.Empty);
+                    }
+                    return true;
+            }
+            return base.ProcessCmdKey(ref msg, keyData);
         }
 
         protected override void OnHandleCreated(EventArgs e)
@@ -143,31 +216,8 @@ namespace AMD_DWORD_Viewer
 
         private void txtSearch_TextChanged(object? sender, EventArgs e)
         {
-            if (isSearchPlaceholder)
-                return;
-
-            ApplyFilter();
-        }
-
-        private void txtSearch_Enter(object? sender, EventArgs e)
-        {
-            if (isSearchPlaceholder)
-            {
-                txtSearch.Text = "";
-                txtSearch.ForeColor = Color.White;
-                isSearchPlaceholder = false;
-            }
-        }
-
-        private void txtSearch_Leave(object? sender, EventArgs e)
-        {
-            if (string.IsNullOrWhiteSpace(txtSearch.Text))
-            {
-                txtSearch.Text = "Search DWORDS...";
-                txtSearch.ForeColor = Color.Gray;
-                isSearchPlaceholder = true;
-                ApplyFilter();
-            }
+            searchDebounceTimer?.Stop();
+            searchDebounceTimer?.Start();
         }
 
         private void ApplyFilter()
@@ -182,18 +232,18 @@ namespace AMD_DWORD_Viewer
 
             try
             {
-                var searchText = isSearchPlaceholder ? "" : txtSearch?.Text?.Trim() ?? "";
+                var searchText = txtSearch?.Text?.Trim() ?? "";
                 var presenceFilter = cboFilter?.SelectedIndex ?? 0;
 
 
                 var entries = allEntries.AsEnumerable();
 
 
-                if (presenceFilter == 1) // Present Only
+                if (presenceFilter == 1)
                 {
                     entries = entries.Where(e => e.Exists);
                 }
-                else if (presenceFilter == 2) // Missing Only
+                else if (presenceFilter == 2)
                 {
                     entries = entries.Where(e => !e.Exists);
                 }
@@ -373,8 +423,8 @@ namespace AMD_DWORD_Viewer
                                 KeyName = entry.KeyName,
                                 RegistryPath = entry.RegistryPath,
                                 Type = Models.ChangeType.Edit,
-                                OldValue = currentValue, // Value BEFORE the edit
-                                NewValue = dialog.Value  // Value AFTER the edit
+                                OldValue = currentValue,
+                                NewValue = dialog.Value
                             };
                             changeHistory.Add(change);
                             UpdateUndoButton();
@@ -455,8 +505,8 @@ namespace AMD_DWORD_Viewer
                             KeyName = entry.KeyName,
                             RegistryPath = entry.RegistryPath,
                             Type = Models.ChangeType.Delete,
-                            OldValue = oldValue,  // Value BEFORE deletion (will be restored on revert)
-                            NewValue = null       // No value after deletion
+                            OldValue = oldValue,
+                            NewValue = null
                         };
                         changeHistory.Add(change);
                         UpdateUndoButton();
@@ -709,10 +759,10 @@ namespace AMD_DWORD_Viewer
                     return;
                 }
 
-                tweakManager = new TweakManager(registryWriter, registryReader);
+                tweakManager = new TweakManager(registryWriter, registryReader, vendor);
                 tweakManager.LoadState(tweaks);
 
-                tweaksPanel = new TweaksPanel(tweakManager, allEntries, RefreshListView);
+                tweaksPanel = new TweaksPanel(tweakManager, allEntries, RefreshListView, vendor);
                 tweaksPanel.LoadTweaks(tweaks);
                 
                 this.Controls.Add(tweaksPanel);

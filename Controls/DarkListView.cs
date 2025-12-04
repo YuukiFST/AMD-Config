@@ -11,7 +11,7 @@ namespace AMD_DWORD_Viewer.Controls
     public class DarkListView : ListView
     {
 
-        private static readonly Color BackgroundColor = Color.FromArgb(30, 30, 30); // #1E1E1E
+        private static readonly Color BackgroundColor = Color.FromArgb(30, 30, 30);
         private static readonly Color ForegroundColor = Color.White;
 
         public DarkListView()
@@ -43,7 +43,7 @@ namespace AMD_DWORD_Viewer.Controls
 
         private const int WM_SETREDRAW = 0x000B;
 
-        public void BeginUpdate()
+        public new void BeginUpdate()
         {
             try
             {
@@ -55,7 +55,7 @@ namespace AMD_DWORD_Viewer.Controls
             catch { }
         }
 
-        public void EndUpdate()
+        public new void EndUpdate()
         {
             try
             {
